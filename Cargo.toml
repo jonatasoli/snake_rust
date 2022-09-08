@@ -7,3 +7,8 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.8.0", features = ["dynamic"] }
+rand = "0.7"
+raw-window-handle = "0.4.3"
+
+[dev-dependencies]
+proptest = "1.0.0"
