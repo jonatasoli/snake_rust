@@ -27,7 +27,7 @@ pub fn position_translation(
     mut q: Query<(&Position, &mut Transform)>,
 ) {
     let window = primary_window.get_single().unwrap();
-    for (pos, mut transform) in q.iter_mut() {
+    for (pos, mut transform) in &mut q.iter_mut() {
         translate_position(transform.as_mut(), pos, window);
     }
 }

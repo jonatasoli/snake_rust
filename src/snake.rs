@@ -29,7 +29,7 @@ pub fn movement_system(
     keyboard_input: Res<Input<KeyCode>>,
     mut head_positions: Query<&mut Position, With<Head>>,
 ) {
-    for mut position in head_positions.iter_mut() {
+    for mut position in &mut head_positions.iter_mut() {
         if keyboard_input.pressed(KeyCode::D) {
             position.x += 1;
         }
