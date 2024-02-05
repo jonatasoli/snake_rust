@@ -2,8 +2,8 @@ use bevy::prelude::Component;
 
 #[derive(Component, Clone, Debug, PartialEq, Eq)]
 pub struct Position {
-    pub x: i32,
-    pub y: i32,
+    pub x: i16,
+    pub y: i16,
 }
 
 #[derive(Component, Debug, PartialEq)]
@@ -13,6 +13,7 @@ pub struct Size {
 }
 
 impl Size {
+    #[must_use]
     pub fn square(x: f32) -> Self {
         Self {
             width: x,

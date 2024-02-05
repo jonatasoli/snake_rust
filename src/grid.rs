@@ -1,27 +1,31 @@
 use crate::components::{Position, Size};
 use bevy::{prelude::*, window::PrimaryWindow};
 
-const GRID_WIDTH: u32 = 10;
-const GRID_HEIGHT: u32 = 10;
+const GRID_WIDTH: u16 = 10;
+const GRID_HEIGHT: u16 = 10;
 
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::needless_pass_by_value)]
 pub fn size_scaling(
     primary_window: Query<&Window, With<PrimaryWindow>>,
     mut q: Query<(&Size, &mut Transform)>,
 ) {
     let window = primary_window.get_single().unwrap();
-    for (sprite_size, mut transform) in q.iter_mut() {
+    for (sprite_size, mut transform) in &mut q.iter_mut() {
         scale_sprite(transform.as_mut(), sprite_size, window);
     }
 }
 
 fn scale_sprite(transform: &mut Transform, sprite_size: &Size, window: &Window) {
     transform.scale = Vec3::new(
-        sprite_size.width / GRID_WIDTH as f32 * window.width(),
-        sprite_size.height / GRID_HEIGHT as f32 * window.height(),
+        sprite_size.width / f32::from(GRID_WIDTH) * window.width(),
+        sprite_size.height / f32::from(GRID_HEIGHT) * window.height(),
         1.0,
     );
 }
 
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::needless_pass_by_value)]
 pub fn position_translation(
     primary_window: Query<&Window, With<PrimaryWindow>>,
     mut q: Query<(&Position, &mut Transform)>,
@@ -39,8 +43,8 @@ fn convert(pos: f32, bound_window: f32, grid_side_lenght: f32) -> f32 {
 
 fn translate_position(transform: &mut Transform, pos: &Position, window: &Window) {
     transform.translation = Vec3::new(
-        convert(pos.x as f32, window.width(), GRID_WIDTH as f32),
-        convert(pos.y as f32, window.height(), GRID_HEIGHT as f32),
+        convert(f32::from(pos.x), window.width(), f32::from(GRID_WIDTH)),
+        convert(f32::from(pos.y), window.height(), f32::from(GRID_HEIGHT)),
         0.0,
     );
 }
