@@ -1,8 +1,8 @@
 use crate::components::{Position, Size};
 use bevy::{prelude::*, window::PrimaryWindow};
 
-const GRID_WIDTH: u16 = 10;
-const GRID_HEIGHT: u16 = 10;
+pub(crate) const GRID_WIDTH: u16 = 10;
+pub(crate) const GRID_HEIGHT: u16 = 10;
 
 #[allow(clippy::missing_panics_doc)]
 #[allow(clippy::needless_pass_by_value)]

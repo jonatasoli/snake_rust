@@ -8,3 +8,6 @@ edition = "2021"
 [dependencies]
 bevy = "0.12"
 rand = "0.8.5"
+
+[dev-dependencies]
+proptest = "1.4.0"
