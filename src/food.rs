@@ -11,6 +11,7 @@ const FOOD_COLOR: Color = Color::rgb(1.0, 1.0, 1.0);
 #[derive(Component)]
 pub struct Food;
 
+#[allow(clippy::cast_possible_wrap)]
 pub fn spawn_system(mut commands: Commands) {
     commands
         .spawn(SpriteBundle {
@@ -22,8 +23,16 @@ pub fn spawn_system(mut commands: Commands) {
         })
         .insert(Food)
         .insert(Position {
-            x: (random::<u16>() % GRID_WIDTH) as i16,
-            y: (random::<u16>() % GRID_HEIGHT) as i16,
+            x: if cfg!(test) {
+                5
+            } else {
+                (random::<u16>() % GRID_WIDTH) as i16
+            },
+            y: if cfg!(test) {
+                7
+            } else {
+                (random::<u16>() % GRID_HEIGHT) as i16
+            },
         })
         .insert(Size::square(0.8));
 }

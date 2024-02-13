@@ -1,12 +1,31 @@
-use crate::components::{Direction, Position, Size};
+use std::collections::HashMap;
+
+use crate::{
+    components::{Direction, Position, Size},
+    food::Food,
+};
 use bevy::prelude::*;
 
 const SNAKE_HEAD_COLOR: Color = Color::rgb(0.7, 0.7, 0.7);
+const SNAKE_SEGMENT_COLOR: Color = Color::rgb(0.8, 0.0, 0.8);
 
 #[derive(Component)]
 pub struct Head {
     direction: Direction,
 }
+
+#[derive(Component)]
+pub struct Segment;
+
+#[derive(Default, Deref, DerefMut, Resource)]
+pub struct Segments(Vec<Entity>);
+
+#[derive(Event)]
+pub struct GrowthEvent;
+
+#[derive(Default, Resource)]
+pub struct LastTailPosition(Option<Position>);
+
 impl Default for Head {
     fn default() -> Self {
         Self {
@@ -15,11 +34,34 @@ impl Default for Head {
     }
 }
 
-pub fn spawn_system(mut commands: Commands) {
+pub fn spawn_system(mut commands: Commands, mut segments: ResMut<Segments>) {
+    *segments = Segments(vec![
+        commands
+            .spawn(SpriteBundle {
+                sprite: Sprite {
+                    color: SNAKE_HEAD_COLOR,
+                    ..default()
+                },
+                transform: Transform {
+                    scale: Vec3::new(10.0, 10.0, 10.0),
+                    ..default()
+                },
+                ..default()
+            })
+            .insert(Head::default())
+            .insert(Segment)
+            .insert(Position { x: 5, y: 5 })
+            .insert(Size::square(0.8))
+            .id(),
+        spawn_segment_system(commands, Position { x: 5, y: 4 }), // <-- novo segmento
+    ]);
+}
+
+pub fn spawn_segment_system(mut commands: Commands, position: Position) -> Entity {
     commands
         .spawn(SpriteBundle {
             sprite: Sprite {
-                color: SNAKE_HEAD_COLOR,
+                color: SNAKE_SEGMENT_COLOR,
                 ..default()
             },
             transform: Transform {
@@ -28,9 +70,10 @@ pub fn spawn_system(mut commands: Commands) {
             },
             ..default()
         })
-        .insert(Head::default()) // <-
-        .insert(Position { x: 5, y: 5 })
-        .insert(Size::square(0.8));
+        .insert(Segment)
+        .insert(position)
+        .insert(Size::square(0.65))
+        .id()
 }
 
 #[allow(clippy::needless_pass_by_value)]
@@ -54,27 +97,92 @@ pub fn movement_input_system(keyboard_input: Res<Input<KeyCode>>, mut heads: Que
 }
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn movement_system(mut heads: Query<(&mut Position, &Head)>) {
-    if let Some((mut pos, head)) = heads.iter_mut().next() {
-        match &head.direction {
-            Direction::Left => {
-                pos.x -= 1;
+pub fn movement_system(
+    segments: ResMut<Segments>,
+    mut last_tail_position: ResMut<LastTailPosition>,
+    mut heads: Query<(Entity, &Head)>,
+    mut positions: Query<(Entity, &Segment, &mut Position)>,
+) {
+    // Criar um hashmap clonado de positions com `Entity => Position`
+    let positions_clone: HashMap<Entity, Position> = positions
+        .iter()
+        .map(|(entity, _segment, position)| (entity, position.clone()))
+        .collect();
+    // Acessar a cabeça (única existente por hora)
+    if let Some((id, head)) = heads.iter_mut().next() {
+        // Iterar sobre segments 2 a 2
+        (*segments).windows(2).for_each(|entity| {
+            // Acessar a posição da `entity[1]` em positions
+            if let Ok((_, _segment, mut position)) = positions.get_mut(entity[1]) {
+                // Acessar a posição da `entity[0]` em positions_clone
+                if let Some(new_position) = positions_clone.get(&entity[0]) {
+                    // Substituir position por new_position
+                    *position = new_position.clone();
+                }
+            };
+        });
+
+        // mesmo código de antes para mover a cabeça
+        let _ = positions.get_mut(id).map(|(_, _segment, mut pos)| {
+            match &head.direction {
+                Direction::Left => {
+                    pos.x -= 1;
+                }
+                Direction::Right => {
+                    pos.x += 1;
+                }
+                Direction::Up => {
+                    pos.y += 1;
+                }
+                Direction::Down => {
+                    pos.y -= 1;
+                }
+            };
+        });
+    }
+    *last_tail_position = LastTailPosition(Some(
+        positions_clone
+            .get(segments.last().unwrap())
+            .unwrap()
+            .clone(),
+    ));
+}
+
+pub fn eating_system(
+    mut commands: Commands,
+    mut growth_writer: EventWriter<GrowthEvent>,
+    food_positions: Query<(Entity, &Position), With<Food>>,
+    head_positions: Query<&Position, With<Head>>,
+) {
+    for head_pos in head_positions.iter() {
+        for (ent, food_pos) in food_positions.iter() {
+            if food_pos == head_pos {
+                commands.entity(ent).despawn();
+                growth_writer.send(GrowthEvent);
             }
-            Direction::Right => {
-                pos.x += 1;
-            }
-            Direction::Up => {
-                pos.y += 1;
-            }
-            Direction::Down => {
-                pos.y -= 1;
-            }
-        };
+        }
+    }
+}
+
+pub fn growth_system(
+    commands: Commands,
+    last_tail_position: Res<LastTailPosition>,
+    mut segments: ResMut<Segments>,
+    mut growth_reader: EventReader<GrowthEvent>,
+) {
+    if growth_reader.read().next().is_some() {
+        segments.push(spawn_segment_system(
+            commands,
+            last_tail_position.0.clone().unwrap(),
+        ));
     }
 }
 
 #[cfg(test)]
 mod test {
+
+    use crate::food::{self, Food};
+
     use super::*;
 
     #[test]
@@ -83,7 +191,8 @@ mod test {
         let mut app = App::new();
 
         // 2 Adicionar o `spawn_snake` startup system
-        app.add_systems(Startup, spawn_system);
+        app.insert_resource(Segments::default())
+            .add_systems(Startup, spawn_system);
 
         // 3 Executar todos os sistemas pelo menos uma vez
         app.update();
@@ -102,7 +211,8 @@ mod test {
         let mut app = App::new();
 
         // Add startup system
-        app.add_systems(Startup, spawn_system);
+        app.insert_resource(Segments::default())
+            .add_systems(Startup, spawn_system);
 
         // Run systems
         app.update();
@@ -119,7 +229,9 @@ mod test {
         let default_position = Position { x: 5, y: 6 };
 
         // Adicionando sistemas
-        app.add_systems(Startup, spawn_system)
+        app.insert_resource(Segments::default())
+            .insert_resource(LastTailPosition::default())
+            .add_systems(Startup, spawn_system)
             .add_systems(Update, movement_system)
             .add_systems(Update, movement_input_system.before(movement_system));
 
@@ -145,7 +257,9 @@ mod test {
         let up_position = Position { x: 5, y: 6 };
 
         // Adiciona systemas
-        app.add_systems(Startup, spawn_system)
+        app.insert_resource(Segments::default())
+            .insert_resource(LastTailPosition::default())
+            .add_systems(Startup, spawn_system)
             .add_systems(Update, movement_system)
             .add_systems(Update, movement_input_system.before(movement_system));
 
@@ -181,7 +295,9 @@ mod test {
         let mut app = App::new();
         let down_left_position = Position { x: 4, y: 6 };
 
-        app.add_systems(Startup, spawn_system)
+        app.insert_resource(Segments::default())
+            .insert_resource(LastTailPosition::default())
+            .add_systems(Startup, spawn_system)
             .add_systems(Update, movement_system)
             .add_systems(Update, movement_input_system.before(movement_system));
 
@@ -211,7 +327,9 @@ mod test {
         let down_left_position = Position { x: 5, y: 6 };
 
         // Add systems
-        app.add_systems(Startup, spawn_system)
+        app.insert_resource(Segments::default())
+            .insert_resource(LastTailPosition::default())
+            .add_systems(Startup, spawn_system)
             .add_systems(Update, movement_system)
             .add_systems(Update, movement_input_system.before(movement_system));
 
@@ -226,5 +344,115 @@ mod test {
         query.iter(&app.world).for_each(|(_head, position)| {
             assert_eq!(&down_left_position, position);
         })
+    }
+
+    #[test]
+    fn entity_snake_has_two_segments() {
+        // Setup app
+        let mut app = App::new();
+
+        // Adicionar sistema de spawn e recurso com segmentos
+        app.insert_resource(Segments::default())
+            .add_systems(Startup, spawn_system);
+
+        // Executar sistema
+        app.update();
+
+        // Buscar todas entidades com componente `Segment`
+        let mut query = app.world.query_filtered::<Entity, With<Segment>>();
+        assert_eq!(query.iter(&app.world).count(), 2);
+    }
+
+    #[test]
+    fn snake_segment_has_followed_head() {
+        // Setup
+        let mut app = App::new();
+        let new_position_head_right = Position { x: 6, y: 5 };
+        let new_position_segment_right = Position { x: 5, y: 5 };
+
+        // Adiciona os systemas
+        app.insert_resource(Segments::default())
+            .insert_resource(LastTailPosition::default())
+            .add_systems(Startup, spawn_system)
+            .add_systems(Update, movement_system)
+            .add_systems(Update, movement_input_system.before(movement_system));
+
+        // adiciona resource apertando a tecla D, movimento para direita
+        let mut input = Input::<KeyCode>::default();
+        input.press(KeyCode::D);
+        app.insert_resource(input);
+
+        // executa sistemas
+        app.update();
+
+        let mut query = app.world.query::<(&Head, &Position)>();
+        query.iter(&app.world).for_each(|(head, position)| {
+            // garante que nova posição da cabeça é esperada:
+            assert_eq!(&new_position_head_right, position);
+            // garante que nova direção é para direita:
+            assert_eq!(head.direction, Direction::Right);
+        });
+
+        let mut query = app.world.query::<(&Segment, &Position, Without<Head>)>();
+        query.iter(&app.world).for_each(|(_segment, position, _)| {
+            // garante que nova posição do segmento é esperada:
+            assert_eq!(&new_position_segment_right, position);
+        });
+
+        // NOVAS POSIÇÕES ESPERADAS
+        let new_position_head_up = Position { x: 6, y: 6 }; // <--
+        let new_position_segment_up = Position { x: 6, y: 5 }; // <--
+
+        // adiciona resource apertando a tecla W, movimento para cima
+        let mut input = Input::<KeyCode>::default();
+        input.press(KeyCode::W); // <--
+        app.insert_resource(input);
+
+        // executa sistemas de novo
+        app.update();
+
+        let mut query = app.world.query::<(&Head, &Position)>();
+        query.iter(&app.world).for_each(|(head, position)| {
+            // garante que nova posição da cabeça é esperada:
+            assert_eq!(&new_position_head_up, position);
+            // garante que nova direção da cabeça é esperada:
+            assert_eq!(head.direction, Direction::Up);
+        });
+
+        let mut query = app.world.query::<(&Segment, &Position, Without<Head>)>();
+        query.iter(&app.world).for_each(|(_segment, position, _)| {
+            // garante que nova posição do segmento é esperada:
+            assert_eq!(&new_position_segment_up, position);
+        })
+    }
+
+    #[test]
+    fn snake_grows_when_eating() {
+        // Setup
+        let mut app = App::new();
+
+        // sistemas
+        app.insert_resource(Segments::default())
+            .insert_resource(LastTailPosition::default())
+            .add_event::<GrowthEvent>()
+            .add_systems(Startup, spawn_system)
+            .add_systems(Update, food::spawn_system)
+            .add_systems(Update, movement_system)
+            .add_systems(Update, eating_system.after(movement_system))
+            .add_systems(Update, growth_system.after(eating_system));
+
+        // update de configuração
+        app.update();
+
+        let mut query = app.world.query::<(&Segment, &Position)>();
+        assert_eq!(query.iter(&app.world).count(), 2);
+        let mut query = app.world.query::<(&Food, &Position)>();
+        assert_eq!(query.iter(&app.world).count(), 1);
+
+        // update de execução
+        app.update();
+
+        let mut query = app.world.query::<(&Segment, &Position)>();
+        assert_eq!(query.iter(&app.world).count(), 3);
     }
 }
