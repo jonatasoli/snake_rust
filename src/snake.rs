@@ -156,8 +156,9 @@ mod test {
         app.update();
 
         let mut query = app.world.query::<(&Head, &Position)>();
-        query.iter(&app.world).for_each(|(_head, position)| {
+        query.iter(&app.world).for_each(|(head, position)| {
             assert_eq!(position, &up_position);
+            assert_eq!(head.direction, Direction::Up); // <- Novo assert
         });
 
         let up_right_position = Position { x: 6, y: 6 };
