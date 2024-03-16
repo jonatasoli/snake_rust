@@ -1,9 +1,11 @@
 use std::time::Duration;
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
+use components::GameEndEvent;
 
 pub mod components;
 pub mod food;
+pub mod game;
 pub mod grid;
 mod snake;
 
@@ -12,6 +14,7 @@ fn main() {
         .add_systems(Startup, setup_camera)
         .insert_resource(snake::Segments::default())
         .insert_resource(snake::LastTailPosition::default())
+        .add_event::<GameEndEvent>() // <-- Adicionar
         .add_event::<snake::GrowthEvent>()
         .add_systems(Startup, snake::spawn_system)
         .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
@@ -43,6 +46,7 @@ fn main() {
         )
         .add_systems(Update, snake::eating_system.after(snake::movement_system))
         .add_systems(Update, snake::growth_system.after(snake::eating_system))
+        .add_systems(Update, game::game_over_system.after(snake::movement_system)) // <-- Adicionar
         .add_systems(PostUpdate, (grid::position_translation, grid::size_scaling))
         .run();
 }

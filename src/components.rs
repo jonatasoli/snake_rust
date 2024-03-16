@@ -1,6 +1,7 @@
-use bevy::prelude::Component;
+use bevy::prelude::{Component, Event};
+use std::fmt::{self, Display};
 
-#[derive(Component, Clone, Debug, PartialEq, Eq)]
+#[derive(Component, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Position {
     pub x: i16,
     pub y: i16,
@@ -37,6 +38,25 @@ impl Direction {
             Self::Right => Self::Left,
             Self::Up => Self::Down,
             Self::Down => Self::Up,
+        }
+    }
+}
+
+#[derive(Component, Clone, Debug, Event, PartialEq, Eq)]
+pub enum GameEndEvent {
+    GameOver,
+}
+
+impl Default for GameEndEvent {
+    fn default() -> Self {
+        Self::GameOver
+    }
+}
+
+impl Display for GameEndEvent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            GameEndEvent::GameOver => write!(f, "Game Over!"),
         }
     }
 }

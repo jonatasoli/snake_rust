@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    components::{Direction, Position, Size},
+    components::{Direction, GameEndEvent, Position, Size},
     food::Food,
+    grid::{GRID_HEIGHT, GRID_WIDTH},
 };
 use bevy::prelude::*;
 
@@ -100,45 +101,60 @@ pub fn movement_input_system(keyboard_input: Res<Input<KeyCode>>, mut heads: Que
 pub fn movement_system(
     segments: ResMut<Segments>,
     mut last_tail_position: ResMut<LastTailPosition>,
+    mut game_end_writer: EventWriter<GameEndEvent>, // <-- Adicionar EventWriter
     mut heads: Query<(Entity, &Head)>,
     mut positions: Query<(Entity, &Segment, &mut Position)>,
+    game_end: Query<&GameEndEvent>, // <--Adicionar
 ) {
-    // Criar um hashmap clonado de positions com `Entity => Position`
     let positions_clone: HashMap<Entity, Position> = positions
         .iter()
         .map(|(entity, _segment, position)| (entity, position.clone()))
         .collect();
-    // Acessar a cabeça (única existente por hora)
     if let Some((id, head)) = heads.iter_mut().next() {
-        // Iterar sobre segments 2 a 2
         (*segments).windows(2).for_each(|entity| {
-            // Acessar a posição da `entity[1]` em positions
             if let Ok((_, _segment, mut position)) = positions.get_mut(entity[1]) {
-                // Acessar a posição da `entity[0]` em positions_clone
                 if let Some(new_position) = positions_clone.get(&entity[0]) {
-                    // Substituir position por new_position
                     *position = new_position.clone();
                 }
             };
         });
 
-        // mesmo código de antes para mover a cabeça
-        let _ = positions.get_mut(id).map(|(_, _segment, mut pos)| {
-            match &head.direction {
-                Direction::Left => {
-                    pos.x -= 1;
+        if game_end.is_empty() {
+            // <-- if verificando se houve um evento de fimd e jogo
+
+            let _ = positions.get_mut(id).map(|(_, _segment, mut pos)| {
+                match &head.direction {
+                    Direction::Left => {
+                        pos.x -= 1;
+                    }
+                    Direction::Right => {
+                        pos.x += 1;
+                    }
+                    Direction::Up => {
+                        pos.y += 1;
+                    }
+                    Direction::Down => {
+                        pos.y -= 1;
+                    }
+                };
+                if pos.x < 0
+                    || pos.y < 0 
+                    || pos.x as u16 >= GRID_WIDTH // <-- Nova verificação
+                    || pos.y as u16 >= GRID_HEIGHT
+                {
+                    game_end_writer.send(GameEndEvent::GameOver); // <-- publicar evento
                 }
-                Direction::Right => {
-                    pos.x += 1;
+
+                if positions_clone.iter()
+                    .filter(|(k, _)| k != &&id)
+                    .map(|(_, v)| v)
+                    .any(|segment_position| &*pos == segment_position)
+                {
+                    game_end_writer.send(GameEndEvent::GameOver);
                 }
-                Direction::Up => {
-                    pos.y += 1;
-                }
-                Direction::Down => {
-                    pos.y -= 1;
-                }
-            };
-        });
+
+            });
+        }
     }
     *last_tail_position = LastTailPosition(Some(
         positions_clone
@@ -231,6 +247,7 @@ mod test {
         // Adicionando sistemas
         app.insert_resource(Segments::default())
             .insert_resource(LastTailPosition::default())
+            .add_event::<GameEndEvent>()
             .add_systems(Startup, spawn_system)
             .add_systems(Update, movement_system)
             .add_systems(Update, movement_input_system.before(movement_system));
@@ -259,6 +276,7 @@ mod test {
         // Adiciona systemas
         app.insert_resource(Segments::default())
             .insert_resource(LastTailPosition::default())
+            .add_event::<GameEndEvent>()
             .add_systems(Startup, spawn_system)
             .add_systems(Update, movement_system)
             .add_systems(Update, movement_input_system.before(movement_system));
@@ -297,6 +315,7 @@ mod test {
 
         app.insert_resource(Segments::default())
             .insert_resource(LastTailPosition::default())
+            .add_event::<GameEndEvent>()
             .add_systems(Startup, spawn_system)
             .add_systems(Update, movement_system)
             .add_systems(Update, movement_input_system.before(movement_system));
@@ -329,6 +348,7 @@ mod test {
         // Add systems
         app.insert_resource(Segments::default())
             .insert_resource(LastTailPosition::default())
+            .add_event::<GameEndEvent>() // <--
             .add_systems(Startup, spawn_system)
             .add_systems(Update, movement_system)
             .add_systems(Update, movement_input_system.before(movement_system));
@@ -373,6 +393,7 @@ mod test {
         // Adiciona os systemas
         app.insert_resource(Segments::default())
             .insert_resource(LastTailPosition::default())
+            .add_event::<GameEndEvent>()
             .add_systems(Startup, spawn_system)
             .add_systems(Update, movement_system)
             .add_systems(Update, movement_input_system.before(movement_system));
@@ -434,6 +455,7 @@ mod test {
         // sistemas
         app.insert_resource(Segments::default())
             .insert_resource(LastTailPosition::default())
+            .add_event::<GameEndEvent>()
             .add_event::<GrowthEvent>()
             .add_systems(Startup, spawn_system)
             .add_systems(Update, food::spawn_system)

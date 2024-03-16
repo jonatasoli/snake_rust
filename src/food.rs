@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashSet};
 use rand::random;
 
 use crate::{
@@ -12,29 +12,36 @@ const FOOD_COLOR: Color = Color::rgb(1.0, 1.0, 1.0);
 pub struct Food;
 
 #[allow(clippy::cast_possible_wrap)]
-pub fn spawn_system(mut commands: Commands) {
-    commands
-        .spawn(SpriteBundle {
-            sprite: Sprite {
-                color: FOOD_COLOR,
-                ..default()
-            },
-            ..default()
-        })
-        .insert(Food)
-        .insert(Position {
+pub fn spawn_system(mut commands: Commands, positions: Query<&Position>) {
+    let positions_set: HashSet<&Position> = positions.iter().collect();
+
+    if let Some(position) = (0..(GRID_WIDTH * GRID_HEIGHT))
+        .map(|_| Position {
             x: if cfg!(test) {
-                5
+                3
             } else {
                 (random::<u16>() % GRID_WIDTH) as i16
             },
             y: if cfg!(test) {
-                7
+                5
             } else {
                 (random::<u16>() % GRID_HEIGHT) as i16
             },
         })
-        .insert(Size::square(0.8));
+        .find(|position| !positions_set.contains(position))
+    {
+        commands
+            .spawn(SpriteBundle {
+                sprite: Sprite {
+                    color: FOOD_COLOR,
+                    ..default()
+                },
+                ..default()
+            })
+            .insert(Food)
+            .insert(position)
+            .insert(Size::square(0.8));
+    }
 }
 
 #[cfg(test)]
@@ -66,5 +73,26 @@ mod test {
                 assert!(y >= 0 && y <= (GRID_HEIGHT -1) as i16);
             })
         }
+    }
+
+    #[test]
+    fn food_only_spawns_once() {
+        // Setup
+        let mut app = App::new();
+
+        // Add systems
+        app.add_systems(Update, spawn_system);
+
+        // Run systems
+        app.update();
+
+        let mut query = app.world.query::<(&Food, &Position)>();
+        assert_eq!(query.iter(&app.world).count(), 1);
+
+        // Run systems
+        app.update();
+
+        let mut query = app.world.query::<(&Food, &Position)>();
+        assert_eq!(query.iter(&app.world).count(), 1)
     }
 }
