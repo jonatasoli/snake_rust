@@ -38,7 +38,7 @@ pub fn position_translation(
 
 fn convert(pos: f32, bound_window: f32, grid_side_lenght: f32) -> f32 {
     let tile_size = bound_window / grid_side_lenght;
-    pos / grid_side_lenght * bound_window - (bound_window / 2.) + (tile_size / 2.)
+    (pos / grid_side_lenght).mul_add(bound_window, -bound_window / 2.) + (tile_size / 2.)
 }
 
 fn translate_position(transform: &mut Transform, pos: &Position, window: &Window) {
@@ -52,6 +52,7 @@ fn translate_position(transform: &mut Transform, pos: &Position, window: &Window
 #[cfg(test)]
 mod test {
     use crate::components::Size;
+    use approx::assert_relative_eq;
     use bevy::window::WindowResolution;
 
     use super::*;
@@ -84,14 +85,14 @@ mod test {
     fn convert_position_x_for_grid_width() {
         let x = convert(4., 400., GRID_WIDTH as f32);
 
-        assert_eq!(x, -20.)
+        assert_relative_eq!(x, -20., epsilon = 0.00001);
     }
 
     #[test]
     fn convert_position_y_for_grid_height() {
         let y = convert(5., 400., GRID_HEIGHT as f32);
 
-        assert_eq!(y, 20.)
+        assert_relative_eq!(y, 20., epsilon = 0.00001);
     }
     #[test]
     fn translate_position_to_window() {

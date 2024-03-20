@@ -343,6 +343,7 @@ dependencies = [
 name = "bevy-snake"
 version = "0.1.0"
 dependencies = [
+ "approx",
  "bevy",
  "proptest",
  "rand",
