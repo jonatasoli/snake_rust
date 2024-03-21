@@ -78,15 +78,15 @@ pub fn spawn_segment_system(mut commands: Commands, position: Position) -> Entit
 }
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn movement_input_system(keyboard_input: Res<Input<KeyCode>>, mut heads: Query<&mut Head>) {
+pub fn movement_input_system(keyboard_input: Res<ButtonInput<KeyCode>>, mut heads: Query<&mut Head>) {
     if let Some(mut head) = heads.iter_mut().next() {
-        let dir: Direction = if keyboard_input.pressed(KeyCode::A) {
+        let dir: Direction = if keyboard_input.pressed(KeyCode::KeyA) {
             Direction::Left
-        } else if keyboard_input.pressed(KeyCode::S) {
+        } else if keyboard_input.pressed(KeyCode::KeyS) {
             Direction::Down
-        } else if keyboard_input.pressed(KeyCode::W) {
+        } else if keyboard_input.pressed(KeyCode::KeyW) {
             Direction::Up
-        } else if keyboard_input.pressed(KeyCode::D) {
+        } else if keyboard_input.pressed(KeyCode::KeyD) {
             Direction::Right
         } else {
             head.direction
@@ -253,8 +253,8 @@ mod test {
             .add_systems(Update, movement_input_system.before(movement_system));
 
         // Adicionando inputs de `KeyCode`s
-        let mut input = Input::<KeyCode>::default();
-        input.press(KeyCode::W);
+        let mut input = ButtonInput::<KeyCode>::default();
+        input.press(KeyCode::KeyW);
         app.insert_resource(input);
 
         // Executando sistemas pelo menos uma vez
@@ -282,8 +282,8 @@ mod test {
             .add_systems(Update, movement_input_system.before(movement_system));
 
         // Testa movimento para cima
-        let mut input = Input::<KeyCode>::default();
-        input.press(KeyCode::W);
+        let mut input = ButtonInput::<KeyCode>::default();
+        input.press(KeyCode::KeyW);
         app.insert_resource(input);
         app.update();
 
@@ -296,8 +296,8 @@ mod test {
         let up_right_position = Position { x: 6, y: 6 };
 
         // Testa movimento para direita
-        let mut input = Input::<KeyCode>::default();
-        input.press(KeyCode::D);
+        let mut input = ButtonInput::<KeyCode>::default();
+        input.press(KeyCode::KeyD);
         app.insert_resource(input);
         app.update();
 
@@ -321,14 +321,14 @@ mod test {
             .add_systems(Update, movement_input_system.before(movement_system));
 
         // Movimenta para baixo
-        let mut input = Input::<KeyCode>::default();
-        input.press(KeyCode::S);
+        let mut input = ButtonInput::<KeyCode>::default();
+        input.press(KeyCode::KeyS);
         app.insert_resource(input);
         app.update();
 
         // Movimenta para esquerda
-        let mut input = Input::<KeyCode>::default();
-        input.press(KeyCode::A);
+        let mut input = ButtonInput::<KeyCode>::default();
+        input.press(KeyCode::KeyA);
         app.insert_resource(input);
         app.update();
 
@@ -354,8 +354,8 @@ mod test {
             .add_systems(Update, movement_input_system.before(movement_system));
 
         // Move down
-        let mut input = Input::<KeyCode>::default();
-        input.press(KeyCode::S);
+        let mut input = ButtonInput::<KeyCode>::default();
+        input.press(KeyCode::KeyS);
         app.insert_resource(input);
         app.update();
 
@@ -399,8 +399,8 @@ mod test {
             .add_systems(Update, movement_input_system.before(movement_system));
 
         // adiciona resource apertando a tecla D, movimento para direita
-        let mut input = Input::<KeyCode>::default();
-        input.press(KeyCode::D);
+        let mut input = ButtonInput::<KeyCode>::default();
+        input.press(KeyCode::KeyD);
         app.insert_resource(input);
 
         // executa sistemas
@@ -414,8 +414,8 @@ mod test {
             assert_eq!(head.direction, Direction::Right);
         });
 
-        let mut query = app.world.query::<(&Segment, &Position, Without<Head>)>();
-        query.iter(&app.world).for_each(|(_segment, position, _)| {
+        let mut query = app.world.query_filtered::<(&Segment, &Position), Without<Head>>();
+        query.iter(&app.world).for_each(|(_segment, position)| {
             // garante que nova posição do segmento é esperada:
             assert_eq!(&new_position_segment_right, position);
         });
@@ -425,8 +425,8 @@ mod test {
         let new_position_segment_up = Position { x: 6, y: 5 }; // <--
 
         // adiciona resource apertando a tecla W, movimento para cima
-        let mut input = Input::<KeyCode>::default();
-        input.press(KeyCode::W); // <--
+        let mut input = ButtonInput::<KeyCode>::default();
+        input.press(KeyCode::KeyW); // <--
         app.insert_resource(input);
 
         // executa sistemas de novo
@@ -440,8 +440,8 @@ mod test {
             assert_eq!(head.direction, Direction::Up);
         });
 
-        let mut query = app.world.query::<(&Segment, &Position, Without<Head>)>();
-        query.iter(&app.world).for_each(|(_segment, position, _)| {
+        let mut query = app.world.query_filtered::<(&Segment, &Position), Without<Head>>();
+        query.iter(&app.world).for_each(|(_segment, position)| {
             // garante que nova posição do segmento é esperada:
             assert_eq!(&new_position_segment_up, position);
         })

@@ -37,8 +37,8 @@ mod test {
             .add_systems(Update, game_over_system.after(snake::movement_system)); // <--
 
         // tecla para cima
-        let mut input = Input::<KeyCode>::default();
-        input.press(KeyCode::W);
+        let mut input = ButtonInput::<KeyCode>::default();
+        input.press(KeyCode::KeyW);
         app.insert_resource(input);
 
         // executgar sistema algumas vezes
@@ -92,8 +92,8 @@ mod test {
             .add_systems(Update, game_over_system.after(snake::movement_system)); // <--
 
         // Add new input resource
-        let mut input = Input::<KeyCode>::default();
-        input.press(KeyCode::A);
+        let mut input = ButtonInput::<KeyCode>::default();
+        input.press(KeyCode::KeyA);
         app.insert_resource(input);
 
         // Run systems again
@@ -130,8 +130,8 @@ mod test {
             .add_systems(Update, game_over_system.after(snake::movement_system)); // <--
 
         // Add new input resource
-        let mut input = Input::<KeyCode>::default();
-        input.press(KeyCode::D);
+        let mut input = ButtonInput::<KeyCode>::default();
+        input.press(KeyCode::KeyD);
         app.insert_resource(input);
 
         // Run systems again
