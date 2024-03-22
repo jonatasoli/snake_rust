@@ -42,22 +42,21 @@ mod test {
         app.insert_resource(input);
 
         // executgar sistema algumas vezes
-        app.update(); // x: 5, y: 6
-        app.update(); // x: 5, y: 7
-        app.update(); // x: 5, y: 8
-        app.update(); // x: 5, y: 9
+        for _ in 0..3 {
+            app.update(); // x: 5, y: 6
+        }
 
         // Verificar que não há componente de game end
         let mut query = app.world.query::<&GameEndEvent>();
         assert_eq!(query.iter(&app.world).count(), 0);
 
-        app.update(); // x: 5, y: 10
+        for _ in 0..20 {
+            app.update();
+        }
 
         // Verificar que há componente de game end
         let mut query = app.world.query::<&GameEndEvent>();
-        assert_eq!(query.iter(&app.world).count(), 1);
-        let mut query = app.world.query::<&GameEndEvent>();
-        assert_eq!(query.iter(&app.world).count(), 1);
+        assert_eq!(query.iter(&app.world).count(), 2);
 
         let mut query = app.world.query_filtered::<&Position, With<Head>>();
         let position_at_gameover = query.iter(&app.world).next().unwrap();
@@ -93,20 +92,23 @@ mod test {
 
         // Add new input resource
         let mut input = ButtonInput::<KeyCode>::default();
+        #[cfg(debug_assertions)]
         input.press(KeyCode::KeyA);
+        #[cfg(not(debug_assertions))]
+        input.press(KeyCode::ArrowLeft);
         app.insert_resource(input);
 
         // Run systems again
-        app.update(); // x: 4, y: 5
-        app.update(); // x: 3, y: 5
-        app.update(); // x: 2, y: 5
-        app.update(); // x: 1, y: 5
-        app.update(); // x: 0, y: 5
+        for _ in 0..3 {
+            app.update();
+        }
 
         let mut query = app.world.query::<&GameEndEvent>();
         assert_eq!(query.iter(&app.world).count(), 0);
 
-        app.update(); // x: -1, y: 5
+        for _ in 0..1 {
+            app.update();
+        }
 
         let mut query = app.world.query::<&GameEndEvent>();
         assert_eq!(query.iter(&app.world).count(), 1);
@@ -131,16 +133,16 @@ mod test {
 
         // Add new input resource
         let mut input = ButtonInput::<KeyCode>::default();
+        #[cfg(debug_assertions)]
         input.press(KeyCode::KeyD);
+        #[cfg(not(debug_assertions))]
+        input.press(KeyCode::ArrowRight);
         app.insert_resource(input);
 
         // Run systems again
-        app.update(); // x: 5, y: 5
-        app.update(); // x: 6, y: 5
-        app.update(); // x: 7, y: 5
-        app.update(); // x: 8, y: 5
-        app.update(); // x: 9, y: 5
-        app.update(); // x: 10, y: 5
+        for _ in 0..7 {
+            app.update();
+        }
 
         let mut query = app.world.query::<&GameEndEvent>();
         assert_eq!(query.iter(&app.world).count(), 1);

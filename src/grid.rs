@@ -1,8 +1,14 @@
 use crate::components::{Position, Size};
 use bevy::{prelude::*, window::PrimaryWindow};
 
+#[cfg(debug_assertions)]
 pub(crate) const GRID_WIDTH: u16 = 10;
+#[cfg(not(debug_assertions))]
+pub(crate) const GRID_WIDTH: u16 = 20;
+#[cfg(debug_assertions)]
 pub(crate) const GRID_HEIGHT: u16 = 10;
+#[cfg(not(debug_assertions))]
+pub(crate) const GRID_HEIGHT: u16 = 20;
 
 #[allow(clippy::missing_panics_doc)]
 #[allow(clippy::needless_pass_by_value)]
@@ -60,8 +66,14 @@ mod test {
     #[test]
     fn transform_has_correct_scale_for_window() {
         // Setup
+        #[cfg(debug_assertions)] // <-- Debug
         let expected_transform = Transform {
             scale: Vec3::new(20., 20., 1.),
+            ..default()
+        };
+        #[cfg(not(debug_assertions))] // <-- Release
+        let expected_transform = Transform {
+            scale: Vec3::new(10., 10., 1.),
             ..default()
         };
         let mut default_transform = Transform {
@@ -85,7 +97,10 @@ mod test {
     fn convert_position_x_for_grid_width() {
         let x = convert(4., 400., GRID_WIDTH as f32);
 
-        assert_relative_eq!(x, -20., epsilon = 0.00001);
+        #[cfg(debug_assertions)] // <-- DEBUG
+        assert_relative_eq!(x, -20., epsilon = 0.00001); // <-- DEBUG
+        #[cfg(not(debug_assertions))] // <-- RELEASE
+        assert_relative_eq!(x, -110., epsilon = 0.00001); // <-- RELEASE
     }
 
     #[test]
@@ -99,7 +114,10 @@ mod test {
         let position = Position { x: 2, y: 8 };
         let mut default_transform = Transform::default();
         let expected = Transform {
-            translation: Vec3::new(-100., 140., 0.),
+            #[cfg(debug_assertions)] // <-- DEBUG
+            translation: Vec3::new(-100., 140., 0.), // <-- DEBUG
+            #[cfg(not(debug_assertions))] // <-- RELEASE
+            translation: Vec3::new(-150., -29.999996, 0.), // <-- RELEASE
             ..default()
         };
 

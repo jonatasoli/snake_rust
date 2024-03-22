@@ -61,6 +61,17 @@ impl Display for GameEndEvent {
     }
 }
 
+#[derive(Component, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Player {
+    pub id: u8,
+}
+
+impl Player {
+    pub const fn id(&self) -> usize {
+        self.id as usize
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

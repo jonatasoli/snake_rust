@@ -22,7 +22,7 @@ fn main() {
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        resolution: (500.0, 500.0).into(),
+                        resolution: (1000.0, 1000.0).into(),
                         title: "Snake".into(),
                         resizable: false,
                         ..default()
