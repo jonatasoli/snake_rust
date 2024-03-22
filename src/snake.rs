@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    components::{Direction, GameEndEvent, Position, Size, Player},
+    components::{Direction, GameEndEvent, Player, Position, Size},
     food::Food,
     grid::{GRID_HEIGHT, GRID_WIDTH},
 };
@@ -43,11 +43,9 @@ pub fn spawn_system(mut commands: Commands, mut segments: ResMut<Segments>) {
         spawn_entity_with_segment(&mut commands, 0),
         spawn_entity_with_segment(&mut commands, 1),
     ]);
-
 }
 
 pub fn spawn_segment_system(commands: &mut Commands, position: Position, player_id: u8) -> Entity {
-
     commands
         .spawn(SpriteBundle {
             sprite: Sprite {
@@ -71,7 +69,10 @@ pub fn spawn_segment_system(commands: &mut Commands, position: Position, player_
 }
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn movement_input_system(keyboard_input: Res<ButtonInput<KeyCode>>, mut heads: Query<(&mut Head, &Player)>) {
+pub fn movement_input_system(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut heads: Query<(&mut Head, &Player)>,
+) {
     heads.iter_mut().for_each(|(mut head, player)| {
         let dir: Direction = if player.id() == 0 {
             if keyboard_input.pressed(KeyCode::KeyA) {
@@ -85,28 +86,29 @@ pub fn movement_input_system(keyboard_input: Res<ButtonInput<KeyCode>>, mut head
             } else {
                 head.direction
             }
-            } else if player.id() == 1 {
-                if keyboard_input.pressed(KeyCode::ArrowLeft) {
-                    Direction::Left
-                } else if keyboard_input.pressed(KeyCode::ArrowDown) {
-                    Direction::Down
-                } else if keyboard_input.pressed(KeyCode::ArrowUp) {
-                    Direction::Up
-                } else if keyboard_input.pressed(KeyCode::ArrowRight) {
-                    Direction::Right
-                } else {
-                    head.direction
-                }
+        } else if player.id() == 1 {
+            if keyboard_input.pressed(KeyCode::ArrowLeft) {
+                Direction::Left
+            } else if keyboard_input.pressed(KeyCode::ArrowDown) {
+                Direction::Down
+            } else if keyboard_input.pressed(KeyCode::ArrowUp) {
+                Direction::Up
+            } else if keyboard_input.pressed(KeyCode::ArrowRight) {
+                Direction::Right
             } else {
-            head.direction
-            };
-            if dir != head.direction.opposite() {
-                head.direction = dir;
+                head.direction
             }
+        } else {
+            head.direction
+        };
+        if dir != head.direction.opposite() {
+            head.direction = dir;
+        }
     });
 }
 
 #[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::cast_sign_loss)]
 pub fn movement_system(
     segments: ResMut<Segments>,
     mut last_tail_position: ResMut<LastTailPosition>,
@@ -119,7 +121,7 @@ pub fn movement_system(
         .iter()
         .map(|(entity, _segment, position)| (entity, position.clone()))
         .collect();
-    for (entity_id, head, Player {id}) in heads.iter() {
+    for (entity_id, head, Player { id }) in heads.iter() {
         let player_id = (*id) as usize;
         (*segments[player_id]).windows(2).for_each(|entity| {
             if let Ok((_, _segment, mut position)) = positions.get_mut(entity[1]) {
@@ -148,48 +150,50 @@ pub fn movement_system(
                     }
                 };
                 if pos.x < 0
-                    || pos.y < 0 
-                    || pos.x as u16 >= GRID_WIDTH // <-- Nova verificação
+                    || pos.y < 0
+                    || pos.x as u16 >= GRID_WIDTH
                     || pos.y as u16 >= GRID_HEIGHT
                 {
                     game_end_writer.send(GameEndEvent::GameOver); // <-- publicar evento
                 }
 
-                if positions_clone.iter()
+                if positions_clone
+                    .iter()
                     .filter(|(k, _)| k != &&entity_id)
                     .map(|(_, v)| v)
                     .any(|segment_position| &*pos == segment_position)
                 {
                     game_end_writer.send(GameEndEvent::GameOver);
                 }
-
             });
+        }
+        *last_tail_position = LastTailPosition(Some(
+            positions_clone
+                .get(segments[player_id].last().unwrap())
+                .unwrap()
+                .clone(),
+        ));
     }
-    *last_tail_position = LastTailPosition(Some(
-        positions_clone
-            .get(segments[player_id].last().unwrap())
-            .unwrap()
-            .clone(),
-    ));
-  }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 pub fn eating_system(
     mut commands: Commands,
     mut growth_writer: EventWriter<GrowthEvent>,
     food_positions: Query<(Entity, &Position), With<Food>>,
     head_positions: Query<(&Position, &Player), With<Head>>,
 ) {
-    for (head_pos, Player {id}) in head_positions.iter() {
+    for (head_pos, Player { id }) in head_positions.iter() {
         for (ent, food_pos) in food_positions.iter() {
             if food_pos == head_pos {
                 commands.entity(ent).despawn();
-                growth_writer.send(GrowthEvent {player_id: *id});
+                growth_writer.send(GrowthEvent { player_id: *id });
             }
         }
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 pub fn growth_system(
     mut commands: Commands,
     last_tail_position: Res<LastTailPosition>,
@@ -199,15 +203,16 @@ pub fn growth_system(
     growth_reader.read().for_each(|event| {
         let player_id = event.player_id as usize;
         if player_id < segments.len() {
-        segments[player_id].push(spawn_segment_system(
-            &mut commands,
-            last_tail_position.0.clone().unwrap(),
-            event.player_id,
-        ));
-    }
-        });
+            segments[player_id].push(spawn_segment_system(
+                &mut commands,
+                last_tail_position.0.clone().unwrap(),
+                event.player_id,
+            ));
+        }
+    });
 }
 
+#[allow(clippy::cast_possible_wrap)]
 fn spawn_entity_with_segment(commands: &mut Commands, player_id: u8) -> Vec<Entity> {
     vec![
         commands
@@ -249,7 +254,6 @@ fn spawn_entity_with_segment(commands: &mut Commands, player_id: u8) -> Vec<Enti
         ),
     ]
 }
-
 
 #[cfg(test)]
 mod test {
@@ -526,20 +530,23 @@ mod test {
             .iter(&app.world)
             .filter(|(_, _, player)| player.id == 0)
             .for_each(|(head, position, _)| {
-            // garante que nova posição da cabeça é esperada:
-            assert_eq!(&new_position_head_right, position);
-            // garante que nova direção é para direita:
-            assert_eq!(head.direction, Direction::Right);
-        });
+                // garante que nova posição da cabeça é esperada:
+                assert_eq!(&new_position_head_right, position);
+                // garante que nova direção é para direita:
+                assert_eq!(head.direction, Direction::Right);
+            });
 
-        let mut query = app.world.query_filtered::<(&Head, &Position, &Player), Without<Head>>(); // <-- Alterar adiconando o player
-        query.iter(&app.world)
+        let mut query = app
+            .world
+            .query_filtered::<(&Head, &Position, &Player), Without<Head>>(); // <-- Alterar adiconando o player
+        query
+            .iter(&app.world)
             .filter(|(_, _, player)| player.id == 0) // <-- Adicionar um filtro
             .for_each(|(head, position, _)| {
-            // garante que nova posição do segmento é esperada:
-            assert_eq!(&new_position_segment_right, position);
-            assert_eq!(head.direction, Direction::Right);
-        });
+                // garante que nova posição do segmento é esperada:
+                assert_eq!(&new_position_segment_right, position);
+                assert_eq!(head.direction, Direction::Right);
+            });
 
         // NOVAS POSIÇÕES ESPERADAS
         let new_position_head_up = Position { x: 4, y: 4 }; // <-- Mudar
@@ -554,24 +561,28 @@ mod test {
         app.update();
 
         let mut query = app.world.query::<(&Head, &Position, &Player)>();
-        query.iter(&app.world).for_each(|(head, position, Player {id})| {
-            if id == &0 {
-            // garante que nova posição da cabeça é esperada:
-            assert_eq!(&new_position_head_up, position);
-            // garante que nova direção da cabeça é esperada:
-            assert_eq!(head.direction, Direction::Up);
-            }
-        });
-
-        let mut query = app.world.query_filtered::<(&Segment, &Position, &Player), Without<Head>>();
         query
             .iter(&app.world)
-            .for_each(|(_segment, position, Player {id})| {
+            .for_each(|(head, position, Player { id })| {
                 if id == &0 {
-                // garante que nova posição do segmento é esperada:
-                assert_eq!(&new_position_segment_up, position);
+                    // garante que nova posição da cabeça é esperada:
+                    assert_eq!(&new_position_head_up, position);
+                    // garante que nova direção da cabeça é esperada:
+                    assert_eq!(head.direction, Direction::Up);
                 }
-        })
+            });
+
+        let mut query = app
+            .world
+            .query_filtered::<(&Segment, &Position, &Player), Without<Head>>();
+        query
+            .iter(&app.world)
+            .for_each(|(_segment, position, Player { id })| {
+                if id == &0 {
+                    // garante que nova posição do segmento é esperada:
+                    assert_eq!(&new_position_segment_up, position);
+                }
+            })
     }
 
     #[test]

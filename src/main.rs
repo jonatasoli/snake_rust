@@ -46,7 +46,7 @@ fn main() {
         )
         .add_systems(Update, snake::eating_system.after(snake::movement_system))
         .add_systems(Update, snake::growth_system.after(snake::eating_system))
-        .add_systems(Update, game::game_over_system.after(snake::movement_system)) // <-- Adicionar
+        .add_systems(Update, game::over_system.after(snake::movement_system)) // <-- Adicionar
         .add_systems(PostUpdate, (grid::position_translation, grid::size_scaling))
         .run();
 }

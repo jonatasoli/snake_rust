@@ -12,6 +12,7 @@ const FOOD_COLOR: Color = Color::rgb(1.0, 1.0, 1.0);
 pub struct Food;
 
 #[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::needless_pass_by_value)]
 pub fn spawn_system(mut commands: Commands, positions: Query<&Position>) {
     let positions_set: HashSet<&Position> = positions.iter().collect();
 

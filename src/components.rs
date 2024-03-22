@@ -32,6 +32,7 @@ pub enum Direction {
 }
 
 impl Direction {
+    #[must_use]
     pub fn opposite(self) -> Self {
         match self {
             Self::Left => Self::Right,
@@ -67,6 +68,7 @@ pub struct Player {
 }
 
 impl Player {
+    #[must_use]
     pub const fn id(&self) -> usize {
         self.id as usize
     }

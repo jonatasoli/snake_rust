@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::GameEndEvent;
 
-pub fn game_over_system(mut commands: Commands, mut reader: EventReader<GameEndEvent>) {
+pub fn over_system(mut commands: Commands, mut reader: EventReader<GameEndEvent>) {
     if reader.read().next().is_some() {
         commands.spawn_empty().insert(GameEndEvent::GameOver);
         println!("{}", GameEndEvent::GameOver);
@@ -34,7 +34,7 @@ mod test {
                 Update,
                 snake::movement_input_system.before(snake::movement_system),
             )
-            .add_systems(Update, game_over_system.after(snake::movement_system)); // <--
+            .add_systems(Update, over_system.after(snake::movement_system)); // <--
 
         // tecla para cima
         let mut input = ButtonInput::<KeyCode>::default();
@@ -88,7 +88,7 @@ mod test {
                 Update,
                 snake::movement_input_system.before(snake::movement_system),
             )
-            .add_systems(Update, game_over_system.after(snake::movement_system)); // <--
+            .add_systems(Update, over_system.after(snake::movement_system)); // <--
 
         // Add new input resource
         let mut input = ButtonInput::<KeyCode>::default();
@@ -129,7 +129,7 @@ mod test {
                 Update,
                 snake::movement_input_system.before(snake::movement_system),
             )
-            .add_systems(Update, game_over_system.after(snake::movement_system)); // <--
+            .add_systems(Update, over_system.after(snake::movement_system)); // <--
 
         // Add new input resource
         let mut input = ButtonInput::<KeyCode>::default();
